@@ -1,18 +1,36 @@
-# my random chord generator
 import random
 import numpy as np
 import simpleaudio as sa
-import os
 from time import sleep 
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-t', '--tempo', type=int, default=120, help='Set tempo in bpm')
+parser.add_argument('--chords', default=['all'], nargs='+',
+                                 choices=['major','minor','seventh','all'])
+args = parser.parse_args()
 
 # set bpm
-bpm = 60
+bpm = args.tempo 
+
+if bpm <= 0:
+    parser.error("--tempo must be a positive number")
+
+print("Tempo: ", bpm)
 
 major_chords = ['A','B','C','D','E','F','G']
-minor_chords = []
-seventh_chords = []
+minor_chords = [f"{i}m" for i in major_chords]
+seventh_chords = [f"{i}7" for i in major_chords]
 
-chords = major_chords + minor_chords + seventh_chords
+chord_map = {'major': major_chords, 'minor': minor_chords, 'seventh': seventh_chords}
+
+if 'all' in args.chords:
+    chords = major_chords + minor_chords + seventh_chords
+else:
+    chords = []
+    for choice in args.chords:
+        chords += chord_map[choice]
 
 SAMPLE_RATE = 44100
 
@@ -43,24 +61,22 @@ def generate_click(freq=800,dur=0.03,volume=0.5,decay=35):
 
     return audio
 
-for i in range(100):
-    audio = generate_click()
+while True:
+    try:
+        # play 4 clicks per bar, print a new chord on the downbeat
+        audio = generate_click()
 
-    sa.play_buffer(audio, 1, 2, SAMPLE_RATE)  
-    sleep(60/bpm)
+        sa.play_buffer(audio, 1, 2, SAMPLE_RATE)  
+        sleep(60/bpm)
+        sa.play_buffer(audio, 1, 2, SAMPLE_RATE)  
+        sleep(60/bpm)
+        sa.play_buffer(audio, 1, 2, SAMPLE_RATE)  
+        sleep(60/bpm)
+        sa.play_buffer(audio, 1, 2, SAMPLE_RATE)
 
-    sa.play_buffer(audio, 1, 2, SAMPLE_RATE)  
-    sleep(60/bpm)
-
-    sa.play_buffer(audio, 1, 2, SAMPLE_RATE)  
-    sleep(60/bpm)
-
-    sa.play_buffer(audio, 1, 2, SAMPLE_RATE) 
-    os.system('clear') 
-    print(random.choice(chords))
-    sleep(60/bpm)
-    
-
-
-
-
+        print("\033[A                             \033[A")  # clear previous chord
+        print(random.choice(chords)) # print new chord
+        sleep(60/bpm)
+    except KeyboardInterrupt:
+        print("\nStopped")
+        break
